@@ -44,7 +44,52 @@ document.addEventListener('DOMContentLoaded', function() {
             { name: 'Années (365j)', value: 31536000 }
         ]
     };
+// Gestionnaire du mode sombre
+const themeToggle = document.getElementById('themeToggle');
+const body = document.body;
+const modeIcons = document.querySelectorAll('.mode-icon');
 
+// Vérifier si un thème est déjà stocké
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'dark') {
+    body.classList.add('dark-theme');
+    themeToggle.checked = true;
+    updateModeIcons(true);
+}
+
+// Fonction pour mettre à jour les icônes du mode
+function updateModeIcons(isDark) {
+    if (isDark) {
+        modeIcons[0].style.opacity = '0.5';
+        modeIcons[1].style.opacity = '1';
+    } else {
+        modeIcons[0].style.opacity = '1';
+        modeIcons[1].style.opacity = '0.5';
+    }
+}
+
+// Mise à jour initiale des icônes
+updateModeIcons(themeToggle.checked);
+
+// Gestionnaire d'événement pour le changement de thème
+themeToggle.addEventListener('change', function() {
+    if (this.checked) {
+        body.classList.add('dark-theme');
+        localStorage.setItem('theme', 'dark');
+        updateModeIcons(true);
+    } else {
+        body.classList.remove('dark-theme');
+        localStorage.setItem('theme', 'light');
+        updateModeIcons(false);
+    }
+});
+
+// Mettre à jour les couleurs des visualisations lorsque le thème change
+themeToggle.addEventListener('change', function() {
+    if (fromValue.value && toValue.value) {
+        convert(); // Mettre à jour les visualisations avec les couleurs du nouveau thème
+    }
+});
     // Éléments DOM
     const tabButtons = document.querySelectorAll('.tab-btn');
     const fromUnitSelect = document.getElementById('fromUnit');

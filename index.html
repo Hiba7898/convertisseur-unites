@@ -7,9 +7,20 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Convertisseur d'Unités Interactif</h1>
-        
+    <div class="header">
+        <div class="container">
+            <div class="header">
+                <h1>Convertisseur d'Unités Interactif</h1>
+                <div class="theme-switch">
+                    <span class="mode-icon">☀️</span>
+                    <label class="switch">
+                        <input type="checkbox" id="themeToggle">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="mode-icon">🌙</span>
+                </div>
+            </div>
+
         <div class="tabs">
             <button class="tab-btn active" data-category="longueur">Longueur</button>
             <button class="tab-btn" data-category="poids">Poids</button>

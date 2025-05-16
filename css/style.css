@@ -1,16 +1,121 @@
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+:root {
+    --bg-color: #f5f7fa;
+    --text-color: #333;
+    --container-bg: #fff;
+    --border-color: #eee;
+    --input-border: #ddd;
+    --primary-color: #3498db;
+    --secondary-color: #2980b9;
+    --accent-color: #e74c3c;
+    --light-bg: #f9f9f9;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+.dark-theme {
+    --bg-color: #1a1a2e;
+    --text-color: #e6e6e6;
+    --container-bg: #16213e;
+    --border-color: #30475e;
+    --input-border: #30475e;
+    --primary-color: #4ca1e4;
+    --secondary-color: #2c8ad3;
+    --accent-color: #f05454;
+    --light-bg: #222831;
+    --shadow-color: rgba(0, 0, 0, 0.3);
 }
 
 body {
-    background-color: #f5f7fa;
-    color: #333;
+    background-color: var(--bg-color);
+    color: var(--text-color);
     line-height: 1.6;
 }
 
+.container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: var(--container-bg);
+    border-radius: 10px;
+    box-shadow: 0 5px 15px var(--shadow-color);
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.theme-switch {
+    display: flex;
+    align-items: center;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 30px;
+    margin: 0 10px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--primary-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(30px);
+}
+
+.mode-icon {
+    font-size: 1.2rem;
+}
+
+h1 {
+    text-align: center;
+    color: var(--text-color);
+}
+
+/* Le reste de votre CSS existant, mais remplacez les couleurs fixes par les variables CSS */
 .container {
     max-width: 800px;
     margin: 2rem auto;

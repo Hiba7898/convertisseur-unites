@@ -7,19 +7,25 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="header">
-        <div class="container">
-            <div class="header">
-                <h1>Convertisseur d'Unités Interactif</h1>
-                <div class="theme-switch">
-                    <span class="mode-icon">☀️</span>
-                    <label class="switch">
-                        <input type="checkbox" id="themeToggle">
-                        <span class="slider"></span>
-                    </label>
-                    <span class="mode-icon">🌙</span>
-                </div>
+    <div class="container">
+        <div class="header">
+            <div class="logo-container">
+                <!-- <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="40" fill="var(--primary-color)" />
+                    <polygon points="40,30 70,50 40,70" fill="white" />
+                    <circle cx="50" cy="50" r="5" fill="white" />
+                </svg> -->
+                <h1>Convertisseur d'Unités</h1>
             </div>
+            <div class="theme-switch">
+                <span class="mode-icon">☀️</span>
+                <label class="switch">
+                    <input type="checkbox" id="themeToggle">
+                    <span class="slider"></span>
+                </label>
+                <span class="mode-icon">🌙</span>
+            </div>
+        </div>
 
         <div class="tabs">
             <button class="tab-btn active" data-category="longueur">Longueur</button>
@@ -41,7 +47,10 @@
                 </div>
                 
                 <div class="input-group">
-                    <input type="number" id="toValue" disabled>
+                    <div class="input-with-copy">
+                        <input type="number" id="toValue" disabled>
+                        <button id="copyBtn" title="Copier le résultat"><i class="copy-icon">📋</i></button>
+                    </div>
                     <select id="toUnit"></select>
                 </div>
             </div>
@@ -55,6 +64,43 @@
         
         <div class="formula-container">
             <p id="formula">Formule: <span id="formulaText"></span></p>
+        </div>
+        
+        <!-- Historique des conversions -->
+        <div class="history-container">
+            <h3>Historique des conversions</h3>
+            <div id="historyList" class="history-list"></div>
+            <button id="clearHistoryBtn" class="clear-btn">Effacer l'historique</button>
+        </div>
+        
+        <!-- Footer avec informations -->
+        <footer class="footer">
+            <p>© 2025 by KND Convertisseur d'Unités Interactif</p>
+            <p>Développé pour faciliter les conversions quotidiennes</p>
+            <div class="footer-links">
+                <a href="#" id="aboutBtn">À propos</a>
+                <a href="#" id="contactBtn">Contact</a>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Modal pour "À propos" -->
+    <div id="aboutModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>À propos de ce convertisseur</h2>
+            <p>Ce convertisseur d'unités interactif a été développé pour faciliter les conversions dans différentes catégories : longueur, poids, devises, température et temps.</p>
+            <p>Utilisez les onglets pour naviguer entre les différentes catégories de conversion, et profitez des visualisations interactives pour mieux comprendre les rapports entre les unités.</p>
+        </div>
+    </div>
+
+    <!-- Modal pour "Contact" -->
+    <div id="contactModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Contact</h2>
+            <p>Pour toute question ou suggestion concernant ce convertisseur, n'hésitez pas à nous contacter :</p>
+            <p><strong>Email :</strong> contact@convertisseur-unites.com</p>
         </div>
     </div>
 

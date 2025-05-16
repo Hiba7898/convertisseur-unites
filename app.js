@@ -44,52 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
             { name: 'Années (365j)', value: 31536000 }
         ]
     };
-// // Gestionnaire du mode sombre
-// const themeToggle = document.getElementById('themeToggle');
-// const body = document.body;
-// const modeIcons = document.querySelectorAll('.mode-icon');
 
-// // Vérifier si un thème est déjà stocké
-// const savedTheme = localStorage.getItem('theme');
-// if (savedTheme === 'dark') {
-//     body.classList.add('dark-theme');
-//     themeToggle.checked = true;
-//     updateModeIcons(true);
-// }
-
-// // Fonction pour mettre à jour les icônes du mode
-// function updateModeIcons(isDark) {
-//     if (isDark) {
-//         modeIcons[0].style.opacity = '0.5';
-//         modeIcons[1].style.opacity = '1';
-//     } else {
-//         modeIcons[0].style.opacity = '1';
-//         modeIcons[1].style.opacity = '0.5';
-//     }
-// }
-
-// // Mise à jour initiale des icônes
-// updateModeIcons(themeToggle.checked);
-
-// // Gestionnaire d'événement pour le changement de thème
-// themeToggle.addEventListener('change', function() {
-//     if (this.checked) {
-//         body.classList.add('dark-theme');
-//         localStorage.setItem('theme', 'dark');
-//         updateModeIcons(true);
-//     } else {
-//         body.classList.remove('dark-theme');
-//         localStorage.setItem('theme', 'light');
-//         updateModeIcons(false);
-//     }
-// });
-
-// Mettre à jour les couleurs des visualisations lorsque le thème change
-themeToggle.addEventListener('change', function() {
-    if (fromValue.value && toValue.value) {
-        convert(); // Mettre à jour les visualisations avec les couleurs du nouveau thème
-    }
-});
     // Éléments DOM
     const tabButtons = document.querySelectorAll('.tab-btn');
     const fromUnitSelect = document.getElementById('fromUnit');
@@ -99,14 +54,60 @@ themeToggle.addEventListener('change', function() {
     const swapBtn = document.getElementById('swapBtn');
     const visualization = document.getElementById('visualization');
     const formulaText = document.getElementById('formulaText');
+    const themeToggle = document.getElementById('themeToggle');
+    const body = document.body;
+    const modeIcons = document.querySelectorAll('.mode-icon');
+    const copyBtn = document.getElementById('copyBtn');
 
     // Variable pour stocker la catégorie actuelle
     let currentCategory = 'longueur';
+
+    // Gestionnaire du mode sombre
+    // Vérifier si un thème est déjà stocké
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        body.classList.add('dark-theme');
+        themeToggle.checked = true;
+        updateModeIcons(true);
+    }
+
+    // Fonction pour mettre à jour les icônes du mode
+    function updateModeIcons(isDark) {
+        if (isDark) {
+            modeIcons[0].style.opacity = '0.5';
+            modeIcons[1].style.opacity = '1';
+        } else {
+            modeIcons[0].style.opacity = '1';
+            modeIcons[1].style.opacity = '0.5';
+        }
+    }
+
+    // Mise à jour initiale des icônes
+    updateModeIcons(themeToggle.checked);
+
+    // Gestionnaire d'événement pour le changement de thème
+    themeToggle.addEventListener('change', function() {
+        if (this.checked) {
+            body.classList.add('dark-theme');
+            localStorage.setItem('theme', 'dark');
+            updateModeIcons(true);
+        } else {
+            body.classList.remove('dark-theme');
+            localStorage.setItem('theme', 'light');
+            updateModeIcons(false);
+        }
+        
+        // Mettre à jour les visualisations avec les nouvelles couleurs du thème
+        if (fromValueInput.value) {
+            convert();
+        }
+    });
 
     // Initialisation
     initTabs();
     loadUnits('longueur');
     convert();
+    loadHistoryFromLocalStorage();
 
     // Gestionnaire d'événements
     tabButtons.forEach(button => {
@@ -123,6 +124,53 @@ themeToggle.addEventListener('change', function() {
     toUnitSelect.addEventListener('change', convert);
     fromValueInput.addEventListener('input', convert);
     swapBtn.addEventListener('click', swapUnits);
+
+    // Gestion du bouton de copie
+    copyBtn.addEventListener('click', function() {
+        const result = document.getElementById('toValue');
+        const unitText = toUnitSelect.options[toUnitSelect.selectedIndex].text;
+        
+        // Créer un texte formaté avec la valeur et l'unité
+        const textToCopy = `${result.value} ${unitText}`;
+        
+        // Copier dans le presse-papiers
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            // Animation de confirmation
+            copyBtn.innerHTML = '<i class="copy-icon">✓</i>';
+            setTimeout(() => {
+                copyBtn.innerHTML = '<i class="copy-icon">📋</i>';
+            }, 2000);
+        });
+    });
+
+    // Gérer le bouton d'effacement
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    clearHistoryBtn.addEventListener('click', function() {
+        document.getElementById('historyList').innerHTML = '';
+        localStorage.removeItem('conversionHistory');
+    });
+
+    // Pour les modals
+    const aboutBtn = document.getElementById('aboutBtn');
+    const aboutModal = document.getElementById('aboutModal');
+    const closeModals = document.querySelectorAll('.close-modal');
+
+    aboutBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        aboutModal.style.display = 'block';
+    });
+
+    closeModals.forEach(btn => {
+        btn.addEventListener('click', function() {
+            aboutModal.style.display = 'none';
+        });
+    });
+
+    window.addEventListener('click', function(e) {
+        if (e.target === aboutModal) {
+            aboutModal.style.display = 'none';
+        }
+    });
 
     // Fonctions
     function initTabs() {
@@ -170,6 +218,8 @@ themeToggle.addEventListener('change', function() {
         const fromValue = parseFloat(fromValueInput.value);
         if (isNaN(fromValue)) {
             toValueInput.value = '';
+            visualization.innerHTML = '';
+            formulaText.textContent = '';
             return;
         }
 
@@ -236,6 +286,18 @@ themeToggle.addEventListener('change', function() {
 
         // Mise à jour de la visualisation
         updateVisualization(fromValue, result, fromUnit, toUnit);
+        
+        // Ajouter à l'historique seulement si la valeur d'entrée est valide
+        const fromUnitText = fromUnitSelect.options[fromUnitSelect.selectedIndex].text.split(' ')[0];
+        const toUnitText = toUnitSelect.options[toUnitSelect.selectedIndex].text.split(' ')[0];
+        
+        addToHistory(
+            fromValueInput.value, 
+            fromUnitText, 
+            toValueInput.value, 
+            toUnitText,
+            currentCategory
+        );
     }
 
     function convertTemperature(value, fromScale, toScale) {
@@ -707,7 +769,6 @@ themeToggle.addEventListener('change', function() {
         const simplifiedFromValue = fromUnitValue / divisor;
         const simplifiedToValue = toUnitValue / divisor;
         
-    
         timeRatio.textContent = `Ratio: 1 ${fromUnit.name.split(' ')[0]} = ${(fromUnitValue/toUnitValue).toFixed(2)} ${toUnit.name.split(' ')[0]}`;
         
         clockContainer.appendChild(fromClockDiv);
@@ -718,47 +779,139 @@ themeToggle.addEventListener('change', function() {
         
         visualization.appendChild(container);
     }
-});
 
-// Gestionnaire du mode sombre
-const themeToggle = document.getElementById('themeToggle');
-const body = document.body;
-const modeIcons = document.querySelectorAll('.mode-icon');
-
-// Vérifier si un thème est déjà stocké
-const savedTheme = localStorage.getItem('theme');
-if (savedTheme === 'dark') {
-    body.classList.add('dark-theme');
-    themeToggle.checked = true;
-    updateModeIcons(true);
-}
-
-// Fonction pour mettre à jour les icônes du mode
-function updateModeIcons(isDark) {
-    if (isDark) {
-        modeIcons[0].style.opacity = '0.5';
-        modeIcons[1].style.opacity = '1';
-    } else {
-        modeIcons[0].style.opacity = '1';
-        modeIcons[1].style.opacity = '0.5';
+    // Fonction pour ajouter à l'historique
+    function addToHistory(fromValue, fromUnitText, toValue, toUnitText, category) {
+        // Vérifier si la valeur d'entrée est valide
+        if (isNaN(parseFloat(fromValue))) {
+            return;
+        }
+        
+        // Créer l'élément d'historique
+        const historyItem = document.createElement('div');
+        historyItem.className = 'history-item';
+        
+        const historyText = document.createElement('div');
+        historyText.className = 'history-text';
+        historyText.textContent = `${fromValue} ${fromUnitText} = ${toValue} ${toUnitText} (${category})`;
+        
+        const reuseBtn = document.createElement('button');
+        reuseBtn.className = 'reuse-btn';
+        reuseBtn.textContent = 'Réutiliser';
+        reuseBtn.dataset.from = fromValue;
+        reuseBtn.dataset.fromUnit = fromUnitSelect.value;
+        reuseBtn.dataset.toUnit = toUnitSelect.value;
+        reuseBtn.dataset.category = currentCategory;
+        
+        reuseBtn.addEventListener('click', function() {
+            // Changer de catégorie si nécessaire
+            if (this.dataset.category !== currentCategory) {
+                const targetTab = document.querySelector(`.tab-btn[data-category="${this.dataset.category}"]`);
+                targetTab.click();
+            }
+            
+            // Définir les valeurs
+            fromValueInput.value = this.dataset.from;
+            fromUnitSelect.value = this.dataset.fromUnit;
+            toUnitSelect.value = this.dataset.toUnit;
+            
+            // Convertir
+            convert();
+        });
+        
+        historyItem.appendChild(historyText);
+        historyItem.appendChild(reuseBtn);
+        
+        // Ajouter au début de la liste
+        const historyList = document.getElementById('historyList');
+        
+        // Vérifier s'il existe déjà une conversion identique
+        let isDuplicate = false;
+        Array.from(historyList.children).forEach(item => {
+            const itemText = item.querySelector('.history-text').textContent;
+            if (itemText === historyText.textContent) {
+                isDuplicate = true;
+                // Déplacer l'élément existant au début de la liste
+                historyList.insertBefore(item, historyList.firstChild);
+            }
+        });
+        
+        // Ajouter uniquement s'il n'y a pas de doublon
+        if (!isDuplicate) {
+            historyList.insertBefore(historyItem, historyList.firstChild);
+            
+            // Limiter l'historique à 10 éléments
+            if (historyList.children.length > 10) {
+                historyList.removeChild(historyList.lastChild);
+            }
+            
+            // Sauvegarder l'historique dans localStorage
+            saveHistoryToLocalStorage();
+        }
     }
-}
 
-// Mise à jour initiale des icônes
-updateModeIcons(themeToggle.checked);
-
-// Gestionnaire d'événement pour le changement de thème
-themeToggle.addEventListener('change', function() {
-    if (this.checked) {
-        body.classList.add('dark-theme');
-        localStorage.setItem('theme', 'dark');
-        updateModeIcons(true);
-    } else {
-        body.classList.remove('dark-theme');
-        localStorage.setItem('theme', 'light');
-        updateModeIcons(false);
+    // Fonction pour sauvegarder l'historique
+    function saveHistoryToLocalStorage() {
+        const historyList = document.getElementById('historyList');
+        const historyItems = [];
+        
+        for (let i = 0; i < historyList.children.length; i++) {
+            const item = historyList.children[i];
+            const btn = item.querySelector('.reuse-btn');
+            
+            historyItems.push({
+                text: item.querySelector('.history-text').textContent,
+                from: btn.dataset.from,
+                fromUnit: btn.dataset.fromUnit,
+                toUnit: btn.dataset.toUnit,
+                category: btn.dataset.category
+            });
+        }
+        
+        localStorage.setItem('conversionHistory', JSON.stringify(historyItems));
     }
-    
-    // Mettre à jour les visualisations avec les nouvelles couleurs du thème
-    convert();
+
+    // Fonction pour charger l'historique
+    function loadHistoryFromLocalStorage() {
+        const savedHistory = localStorage.getItem('conversionHistory');
+        if (savedHistory) {
+            const historyItems = JSON.parse(savedHistory);
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+            
+            historyItems.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                
+                const historyText = document.createElement('div');
+                historyText.className = 'history-text';
+                historyText.textContent = item.text;
+                
+                const reuseBtn = document.createElement('button');
+                reuseBtn.className = 'reuse-btn';
+                reuseBtn.textContent = 'Réutiliser';
+                reuseBtn.dataset.from = item.from;
+                reuseBtn.dataset.fromUnit = item.fromUnit;
+                reuseBtn.dataset.toUnit = item.toUnit;
+                reuseBtn.dataset.category = item.category;
+                
+                reuseBtn.addEventListener('click', function() {
+                    if (this.dataset.category !== currentCategory) {
+                        const targetTab = document.querySelector(`.tab-btn[data-category="${this.dataset.category}"]`);
+                        targetTab.click();
+                    }
+                    
+                    fromValueInput.value = this.dataset.from;
+                    fromUnitSelect.value = this.dataset.fromUnit;
+                    toUnitSelect.value = this.dataset.toUnit;
+                    
+                    convert();
+                });
+                
+                historyItem.appendChild(historyText);
+                historyItem.appendChild(reuseBtn);
+                historyList.appendChild(historyItem);
+            });
+        }
+    }
 });

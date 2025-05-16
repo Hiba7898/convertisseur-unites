@@ -153,22 +153,37 @@ document.addEventListener('DOMContentLoaded', function() {
     // Pour les modals
     const aboutBtn = document.getElementById('aboutBtn');
     const aboutModal = document.getElementById('aboutModal');
+    const contactBtn = document.getElementById('contactBtn');
+    const contactModal = document.getElementById('contactModal');
     const closeModals = document.querySelectorAll('.close-modal');
 
+    // Gestionnaire pour ouvrir le modal "À propos"
     aboutBtn.addEventListener('click', function(e) {
         e.preventDefault();
         aboutModal.style.display = 'block';
     });
 
+    // Gestionnaire pour ouvrir le modal "Contact"
+    contactBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        contactModal.style.display = 'block';
+    });
+
+    // Gestionnaire pour fermer tous les modals avec le bouton X
     closeModals.forEach(btn => {
         btn.addEventListener('click', function() {
             aboutModal.style.display = 'none';
+            contactModal.style.display = 'none';
         });
     });
 
+    // Gestionnaire pour fermer les modals en cliquant en dehors
     window.addEventListener('click', function(e) {
         if (e.target === aboutModal) {
             aboutModal.style.display = 'none';
+        }
+        if (e.target === contactModal) {
+            contactModal.style.display = 'none';
         }
     });
 

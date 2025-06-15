@@ -63,7 +63,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentCategory = 'longueur';
 
     // Gestionnaire du mode sombre
-    // Vérifier si un thème est déjà stocké
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         body.classList.add('dark-theme');
@@ -88,12 +87,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Gestionnaire d'événement pour le changement de thème
     themeToggle.addEventListener('change', function() {
         if (this.checked) {
-            body.classList.add('dark-theme');
-            localStorage.setItem('theme', 'dark');
+            body.classList.add('light-theme');
+            localStorage.setItem('theme', 'light');
             updateModeIcons(true);
         } else {
-            body.classList.remove('dark-theme');
-            localStorage.setItem('theme', 'light');
+            body.classList.remove('light-theme');
+            localStorage.setItem('theme', 'dark');
             updateModeIcons(false);
         }
         
@@ -109,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
     convert();
     loadHistoryFromLocalStorage();
 
-    // Gestionnaire d'événements
+    // Gestionnaire d'événements pour les onglets
     tabButtons.forEach(button => {
         button.addEventListener('click', function() {
             const category = this.dataset.category;
@@ -117,9 +116,13 @@ document.addEventListener('DOMContentLoaded', function() {
             loadUnits(category);
             currentCategory = category;
             convert();
+            
+            // Effet ripple
+            addRippleEffect(this);
         });
     });
 
+    // Event listeners
     fromUnitSelect.addEventListener('change', convert);
     toUnitSelect.addEventListener('change', convert);
     fromValueInput.addEventListener('input', convert);
@@ -127,67 +130,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Gestion du bouton de copie
     copyBtn.addEventListener('click', function() {
-        const result = document.getElementById('toValue');
+        const result = toValueInput.value;
         const unitText = toUnitSelect.options[toUnitSelect.selectedIndex].text;
+        const textToCopy = `${result} ${unitText}`;
         
-        // Créer un texte formaté avec la valeur et l'unité
-        const textToCopy = `${result.value} ${unitText}`;
-        
-        // Copier dans le presse-papiers
         navigator.clipboard.writeText(textToCopy).then(() => {
-            // Animation de confirmation
-            copyBtn.innerHTML = '<i class="copy-icon">✓</i>';
+            this.innerHTML = '✅';
+            this.style.background = 'linear-gradient(135deg, #27ae60, #2ecc71)';
             setTimeout(() => {
-                copyBtn.innerHTML = '<i class="copy-icon">📋</i>';
+                this.innerHTML = '📋';
+                this.style.background = 'var(--accent-gradient)';
             }, 2000);
         });
     });
 
     // Gérer le bouton d'effacement
     const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-    clearHistoryBtn.addEventListener('click', function() {
-        document.getElementById('historyList').innerHTML = '';
-        localStorage.removeItem('conversionHistory');
-    });
-
-    // Pour les modals
-    const aboutBtn = document.getElementById('aboutBtn');
-    const aboutModal = document.getElementById('aboutModal');
-    const contactBtn = document.getElementById('contactBtn');
-    const contactModal = document.getElementById('contactModal');
-    const closeModals = document.querySelectorAll('.close-modal');
-
-    // Gestionnaire pour ouvrir le modal "À propos"
-    aboutBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        aboutModal.style.display = 'block';
-    });
-
-    // Gestionnaire pour ouvrir le modal "Contact"
-    contactBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        contactModal.style.display = 'block';
-    });
-
-    // Gestionnaire pour fermer tous les modals avec le bouton X
-    closeModals.forEach(btn => {
-        btn.addEventListener('click', function() {
-            aboutModal.style.display = 'none';
-            contactModal.style.display = 'none';
+    if (clearHistoryBtn) {
+        clearHistoryBtn.addEventListener('click', function() {
+            const historyList = document.getElementById('historyList');
+            if (historyList) {
+                historyList.innerHTML = '';
+            }
+            localStorage.removeItem('conversionHistory');
         });
-    });
+    }
 
-    // Gestionnaire pour fermer les modals en cliquant en dehors
-    window.addEventListener('click', function(e) {
-        if (e.target === aboutModal) {
-            aboutModal.style.display = 'none';
-        }
-        if (e.target === contactModal) {
-            contactModal.style.display = 'none';
-        }
-    });
+    // Gestion des modals
+    setupModals();
 
-    // Fonctions
+    // Fonctions principales
     function initTabs() {
         tabButtons.forEach(button => {
             if (button.dataset.category === currentCategory) {
@@ -202,24 +174,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadUnits(category) {
-        // Vider les sélecteurs
         fromUnitSelect.innerHTML = '';
         toUnitSelect.innerHTML = '';
 
-        // Remplir avec les nouvelles unités
-        units[category].forEach(unit => {
+        units[category].forEach((unit, index) => {
             const fromOption = document.createElement('option');
-            fromOption.value = units[category].indexOf(unit);
+            fromOption.value = index;
             fromOption.textContent = unit.name;
             fromUnitSelect.appendChild(fromOption);
 
             const toOption = document.createElement('option');
-            toOption.value = units[category].indexOf(unit);
+            toOption.value = index;
             toOption.textContent = unit.name;
             toUnitSelect.appendChild(toOption);
         });
 
-        // Définir des valeurs par défaut différentes
         if (fromUnitSelect.options.length > 0) {
             fromUnitSelect.selectedIndex = 0;
         }
@@ -248,61 +217,18 @@ document.addEventListener('DOMContentLoaded', function() {
         let formula = '';
 
         if (currentCategory === 'temperature') {
-            // Conversion de température
             result = convertTemperature(fromValue, fromUnit.value, toUnit.value);
-            
-            // Formule pour la température
-            switch(fromUnit.value) {
-                case 'C':
-                    if (toUnit.value === 'F') {
-                        formula = `${fromValue}°C × 9/5 + 32 = ${result.toFixed(2)}°F`;
-                    } else if (toUnit.value === 'K') {
-                        formula = `${fromValue}°C + 273.15 = ${result.toFixed(2)}K`;
-                    } else {
-                        formula = `${fromValue}°C = ${result.toFixed(2)}°C`;
-                    }
-                    break;
-                case 'F':
-                    if (toUnit.value === 'C') {
-                        formula = `(${fromValue}°F - 32) × 5/9 = ${result.toFixed(2)}°C`;
-                    } else if (toUnit.value === 'K') {
-                        formula = `(${fromValue}°F - 32) × 5/9 + 273.15 = ${result.toFixed(2)}K`;
-                    } else {
-                        formula = `${fromValue}°F = ${result.toFixed(2)}°F`;
-                    }
-                    break;
-                case 'K':
-                    if (toUnit.value === 'C') {
-                        formula = `${fromValue}K - 273.15 = ${result.toFixed(2)}°C`;
-                    } else if (toUnit.value === 'F') {
-                        formula = `(${fromValue}K - 273.15) × 9/5 + 32 = ${result.toFixed(2)}°F`;
-                    } else {
-                        formula = `${fromValue}K = ${result.toFixed(2)}K`;
-                    }
-                    break;
-            }
+            formula = getTemperatureFormula(fromValue, result, fromUnit, toUnit);
         } else {
-            // Conversion standard
             result = (fromValue * fromUnit.value) / toUnit.value;
-            
-            // Format de la formule
-            const unitNameFrom = fromUnit.name.split(' ')[0];
-            const unitNameTo = toUnit.name.split(' ')[0];
-            
-            if (fromUnit.value === toUnit.value) {
-                formula = `${fromValue} ${unitNameFrom} = ${result.toFixed(4)} ${unitNameTo}`;
-            } else {
-                formula = `${fromValue} ${unitNameFrom} × ${fromUnit.value} ÷ ${toUnit.value} = ${result.toFixed(4)} ${unitNameTo}`;
-            }
+            formula = getStandardFormula(fromValue, result, fromUnit, toUnit);
         }
 
         toValueInput.value = result.toFixed(4);
         formulaText.textContent = formula;
 
-        // Mise à jour de la visualisation
         updateVisualization(fromValue, result, fromUnit, toUnit);
         
-        // Ajouter à l'historique seulement si la valeur d'entrée est valide
         const fromUnitText = fromUnitSelect.options[fromUnitSelect.selectedIndex].text.split(' ')[0];
         const toUnitText = toUnitSelect.options[toUnitSelect.selectedIndex].text.split(' ')[0];
         
@@ -318,20 +244,57 @@ document.addEventListener('DOMContentLoaded', function() {
     function convertTemperature(value, fromScale, toScale) {
         if (fromScale === toScale) return value;
         
-        // Conversion en Celsius comme intermédiaire
         let celsius;
-        
         switch(fromScale) {
             case 'C': celsius = value; break;
             case 'F': celsius = (value - 32) * 5/9; break;
             case 'K': celsius = value - 273.15; break;
         }
         
-        // Conversion de Celsius vers l'échelle cible
         switch(toScale) {
             case 'C': return celsius;
             case 'F': return celsius * 9/5 + 32;
             case 'K': return celsius + 273.15;
+        }
+    }
+
+    function getTemperatureFormula(fromValue, result, fromUnit, toUnit) {
+        switch(fromUnit.value) {
+            case 'C':
+                if (toUnit.value === 'F') {
+                    return `${fromValue}°C × 9/5 + 32 = ${result.toFixed(2)}°F`;
+                } else if (toUnit.value === 'K') {
+                    return `${fromValue}°C + 273.15 = ${result.toFixed(2)}K`;
+                } else {
+                    return `${fromValue}°C = ${result.toFixed(2)}°C`;
+                }
+            case 'F':
+                if (toUnit.value === 'C') {
+                    return `(${fromValue}°F - 32) × 5/9 = ${result.toFixed(2)}°C`;
+                } else if (toUnit.value === 'K') {
+                    return `(${fromValue}°F - 32) × 5/9 + 273.15 = ${result.toFixed(2)}K`;
+                } else {
+                    return `${fromValue}°F = ${result.toFixed(2)}°F`;
+                }
+            case 'K':
+                if (toUnit.value === 'C') {
+                    return `${fromValue}K - 273.15 = ${result.toFixed(2)}°C`;
+                } else if (toUnit.value === 'F') {
+                    return `(${fromValue}K - 273.15) × 9/5 + 32 = ${result.toFixed(2)}°F`;
+                } else {
+                    return `${fromValue}K = ${result.toFixed(2)}K`;
+                }
+        }
+    }
+
+    function getStandardFormula(fromValue, result, fromUnit, toUnit) {
+        const unitNameFrom = fromUnit.name.split(' ')[0];
+        const unitNameTo = toUnit.name.split(' ')[0];
+        
+        if (fromUnit.value === toUnit.value) {
+            return `${fromValue} ${unitNameFrom} = ${result.toFixed(4)} ${unitNameTo}`;
+        } else {
+            return `${fromValue} ${unitNameFrom} × ${fromUnit.value} ÷ ${toUnit.value} = ${result.toFixed(4)} ${unitNameTo}`;
         }
     }
 
@@ -343,7 +306,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateVisualization(fromValue, toValue, fromUnit, toUnit) {
-        // Vider la visualisation
         visualization.innerHTML = '';
         
         switch(currentCategory) {
@@ -365,165 +327,305 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Visualisations
     function createLengthVisualization(fromValue, toValue, fromUnit, toUnit) {
         const container = document.createElement('div');
-        container.style.width = '100%';
         container.style.display = 'flex';
-        container.style.flexDirection = 'column';
+        container.style.justifyContent = 'space-around';
         container.style.alignItems = 'center';
-        container.style.justifyContent = 'center';
+        container.style.width = '100%';
         container.style.height = '100%';
         container.style.padding = '20px';
-        
-        // Calculer la largeur maximale disponible
-        const maxWidth = 600;
-        
+
         // Première barre
-        const fromBarContainer = document.createElement('div');
-        fromBarContainer.style.width = '100%';
-        fromBarContainer.style.position = 'relative';
-        fromBarContainer.style.marginBottom = '40px';
-        
         const fromBar = document.createElement('div');
         fromBar.className = 'length-bar';
-        
-        // Limiter la largeur pour les valeurs extrêmes
-        const fromWidthPercent = Math.min(90, Math.max(10, 50));
-        fromBar.style.width = `${fromWidthPercent}%`;
-        
-        const fromLabel = document.createElement('div');
-        fromLabel.className = 'length-label';
-        fromLabel.textContent = `${fromValue} ${fromUnit.name.split(' ')[0]}`;
-        fromLabel.style.left = '0';
-        fromBar.appendChild(fromLabel);
-        
-        fromBarContainer.appendChild(fromBar);
-        
+        fromBar.style.width = '200px';
+        fromBar.innerHTML = `<div class="length-label">${fromValue} ${fromUnit.name.split(' ')[0]}</div>`;
+
         // Deuxième barre
-        const toBarContainer = document.createElement('div');
-        toBarContainer.style.width = '100%';
-        toBarContainer.style.position = 'relative';
-        
         const toBar = document.createElement('div');
         toBar.className = 'length-bar';
-        
-        // Calculer la largeur relative de la deuxième barre
         const ratio = (fromValue * fromUnit.value) / (toValue * toUnit.value);
-        const toWidthPercent = Math.min(90, Math.max(10, fromWidthPercent / ratio));
-        toBar.style.width = `${toWidthPercent}%`;
-        
-        const toLabel = document.createElement('div');
-        toLabel.className = 'length-label';
-        toLabel.textContent = `${toValue.toFixed(2)} ${toUnit.name.split(' ')[0]}`;
-        toLabel.style.left = '0';
-        toBar.appendChild(toLabel);
-        
-        toBarContainer.appendChild(toBar);
-        
-        container.appendChild(fromBarContainer);
-        container.appendChild(toBarContainer);
+        const toWidth = Math.min(300, Math.max(50, 200 / ratio));
+        toBar.style.width = `${toWidth}px`;
+        toBar.innerHTML = `<div class="length-label">${toValue.toFixed(2)} ${toUnit.name.split(' ')[0]}</div>`;
+
+        container.appendChild(fromBar);
+        container.appendChild(toBar);
         visualization.appendChild(container);
     }
 
     function createWeightVisualization(fromValue, toValue, fromUnit, toUnit) {
         const container = document.createElement('div');
-        container.style.width = '100%';
-        container.style.height = '100%';
         container.style.display = 'flex';
         container.style.justifyContent = 'center';
         container.style.alignItems = 'center';
-        
-        // Création de la balance
-        const balanceContainer = document.createElement('div');
-        balanceContainer.className = 'weight-balance';
-        
-        // Support central
-        const balanceStand = document.createElement('div');
-        balanceStand.className = 'balance-stand';
-        
-        // Barre de la balance
-        const balanceBeam = document.createElement('div');
-        balanceBeam.className = 'balance-beam';
-        
-        // Conversion en valeurs de base (g ou kg) pour comparaison
-        const fromValueBase = fromValue * fromUnit.value;
-        const toValueBase = toValue * toUnit.value;
-        
-        // Calculer l'angle de rotation de la balance (limité à +/- 20 degrés)
-        const balanceRatio = fromValueBase / toValueBase;
-        const angle = Math.min(20, Math.max(-20, 10 * Math.log2(balanceRatio)));
-        balanceBeam.style.transform = `rotate(${angle}deg)`;
-        
-        // Premier plateau (gauche)
-        const leftScale = document.createElement('div');
-        leftScale.className = 'weight-scale left';
-        leftScale.style.transform = `translateY(${angle}px)`;
-        
+        container.style.width = '100%';
+        container.style.height = '100%';
+        container.style.position = 'relative';
+
+        // Structure principale de la balance moderne
+        const balanceStructure = document.createElement('div');
+        balanceStructure.style.position = 'relative';
+        balanceStructure.style.width = '400px';
+        balanceStructure.style.height = '200px';
+
+        // Calculer l'inclinaison
+        const fromWeight = fromValue * fromUnit.value;
+        const toWeight = toValue * toUnit.value;
+        const ratio = fromWeight / toWeight;
+        const angle = Math.min(12, Math.max(-12, 6 * Math.log2(ratio)));
+
+        // Base elliptique (gris bleu)
+        const base = document.createElement('div');
+        base.style.width = '140px';
+        base.style.height = '30px';
+        base.style.background = 'linear-gradient(135deg, #5D6D7E, #4A5568)';
+        base.style.borderRadius = '70px';
+        base.style.position = 'absolute';
+        base.style.left = '50%';
+        base.style.bottom = '10px';
+        base.style.transform = 'translateX(-50%)';
+        base.style.boxShadow = '0 6px 20px rgba(77, 85, 104, 0.4)';
+
+        // Support principal (bleu marine)
+        const mainSupport = document.createElement('div');
+        mainSupport.style.width = '50px';
+        mainSupport.style.height = '90px';
+        mainSupport.style.background = 'linear-gradient(135deg, #2E4057, #3D5A80)';
+        mainSupport.style.borderRadius = '25px 25px 10px 10px';
+        mainSupport.style.position = 'absolute';
+        mainSupport.style.left = '50%';
+        mainSupport.style.bottom = '40px';
+        mainSupport.style.transform = 'translateX(-50%)';
+        mainSupport.style.boxShadow = '0 4px 15px rgba(46, 64, 87, 0.3)';
+
+        // Partie haute du support (bleu plus clair)
+        const topSupport = document.createElement('div');
+        topSupport.style.width = '35px';
+        topSupport.style.height = '25px';
+        topSupport.style.background = 'linear-gradient(135deg, #3D5A80, #4A90E2)';
+        topSupport.style.borderRadius = '17px';
+        topSupport.style.position = 'absolute';
+        topSupport.style.left = '50%';
+        topSupport.style.top = '55px';
+        topSupport.style.transform = 'translateX(-50%)';
+        topSupport.style.boxShadow = '0 3px 10px rgba(61, 90, 128, 0.3)';
+
+        // Barre principale (gris clair)
+        const mainBeam = document.createElement('div');
+        mainBeam.style.width = '300px';
+        mainBeam.style.height = '6px';
+        mainBeam.style.background = 'linear-gradient(135deg, #E5E7EB, #D1D5DB)';
+        mainBeam.style.borderRadius = '3px';
+        mainBeam.style.position = 'absolute';
+        mainBeam.style.left = '50%';
+        mainBeam.style.top = '67px';
+        mainBeam.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+        mainBeam.style.transformOrigin = 'center';
+        mainBeam.style.transition = 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+        mainBeam.style.boxShadow = '0 2px 6px rgba(209, 213, 219, 0.4)';
+
+        // Point de pivot central (orange doré)
+        const pivot = document.createElement('div');
+        pivot.style.width = '18px';
+        pivot.style.height = '18px';
+        pivot.style.background = 'linear-gradient(135deg, #F59E0B, #D97706)';
+        pivot.style.borderRadius = '50%';
+        pivot.style.position = 'absolute';
+        pivot.style.left = '50%';
+        pivot.style.top = '61px';
+        pivot.style.transform = 'translateX(-50%)';
+        pivot.style.boxShadow = '0 3px 8px rgba(245, 158, 11, 0.4)';
+        pivot.style.border = '2px solid #92400E';
+        pivot.style.zIndex = '10';
+
+        // Connexion plateau gauche (orange)
+        const leftConnection = document.createElement('div');
+        leftConnection.style.width = '14px';
+        leftConnection.style.height = '14px';
+        leftConnection.style.background = 'linear-gradient(135deg, #F59E0B, #D97706)';
+        leftConnection.style.borderRadius = '50%';
+        leftConnection.style.position = 'absolute';
+        leftConnection.style.left = '65px';
+        leftConnection.style.top = `${67 + angle * 1.5}px`;
+        leftConnection.style.boxShadow = '0 2px 6px rgba(245, 158, 11, 0.4)';
+        leftConnection.style.transition = 'top 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+        leftConnection.style.border = '1px solid #92400E';
+
+        // Connexion plateau droit (orange)
+        const rightConnection = document.createElement('div');
+        rightConnection.style.width = '14px';
+        rightConnection.style.height = '14px';
+        rightConnection.style.background = 'linear-gradient(135deg, #F59E0B, #D97706)';
+        rightConnection.style.borderRadius = '50%';
+        rightConnection.style.position = 'absolute';
+        rightConnection.style.right = '65px';
+        rightConnection.style.top = `${67 - angle * 1.5}px`;
+        rightConnection.style.boxShadow = '0 2px 6px rgba(245, 158, 11, 0.4)';
+        rightConnection.style.transition = 'top 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+        rightConnection.style.border = '1px solid #92400E';
+
+        // Plateau gauche (jaune doré)
+        const leftPlate = document.createElement('div');
+        leftPlate.style.width = '100px';
+        leftPlate.style.height = '25px';
+        leftPlate.style.background = 'linear-gradient(135deg, #FCD34D, #F59E0B)';
+        leftPlate.style.borderRadius = '50px';
+        leftPlate.style.position = 'absolute';
+        leftPlate.style.left = '15px';
+        leftPlate.style.top = `${85 + angle * 3}px`;
+        leftPlate.style.boxShadow = '0 8px 25px rgba(252, 211, 77, 0.4)';
+        leftPlate.style.transition = 'top 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+        leftPlate.style.border = '3px solid #D97706';
+
+        // Effet de brillance sur le plateau gauche
+        const leftShine = document.createElement('div');
+        leftShine.style.width = '60px';
+        leftShine.style.height = '8px';
+        leftShine.style.background = 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)';
+        leftShine.style.borderRadius = '4px';
+        leftShine.style.position = 'absolute';
+        leftShine.style.top = '6px';
+        leftShine.style.left = '20px';
+        leftPlate.appendChild(leftShine);
+
+        // Plateau droit (jaune doré)
+        const rightPlate = document.createElement('div');
+        rightPlate.style.width = '100px';
+        rightPlate.style.height = '25px';
+        rightPlate.style.background = 'linear-gradient(135deg, #FCD34D, #F59E0B)';
+        rightPlate.style.borderRadius = '50px';
+        rightPlate.style.position = 'absolute';
+        rightPlate.style.right = '15px';
+        rightPlate.style.top = `${85 - angle * 3}px`;
+        rightPlate.style.boxShadow = '0 8px 25px rgba(252, 211, 77, 0.4)';
+        rightPlate.style.transition = 'top 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+        rightPlate.style.border = '3px solid #D97706';
+
+        // Effet de brillance sur le plateau droit
+        const rightShine = document.createElement('div');
+        rightShine.style.width = '60px';
+        rightShine.style.height = '8px';
+        rightShine.style.background = 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)';
+        rightShine.style.borderRadius = '4px';
+        rightShine.style.position = 'absolute';
+        rightShine.style.top = '6px';
+        rightShine.style.left = '20px';
+        rightPlate.appendChild(rightShine);
+
+        // Labels au-dessus des plateaux
         const leftLabel = document.createElement('div');
-        leftLabel.className = 'weight-label';
-        leftLabel.textContent = `${fromValue} ${fromUnit.name.split(' ')[0]}`;
-        leftScale.appendChild(leftLabel);
-        
-        // Deuxième plateau (droite)
-        const rightScale = document.createElement('div');
-        rightScale.className = 'weight-scale right';
-        rightScale.style.transform = `translateY(${-angle}px)`;
-        
+        leftLabel.style.position = 'absolute';
+        leftLabel.style.left = '15px';
+        leftLabel.style.top = `${55 + angle * 3}px`;
+        leftLabel.style.width = '100px';
+        leftLabel.style.textAlign = 'center';
+        leftLabel.style.color = 'var(--text-light)';
+        leftLabel.style.fontWeight = '700';
+        leftLabel.style.fontSize = '0.95rem';
+        leftLabel.style.textShadow = '0 2px 4px rgba(0, 0, 0, 0.3)';
+        leftLabel.style.transition = 'top 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+        leftLabel.innerHTML = `
+            <div style="margin-bottom: 3px; color: #FCD34D;">${fromValue}</div>
+            <div style="font-size: 0.8rem; font-weight: 600; opacity: 0.9;">${fromUnit.name.split(' ')[0]}</div>
+        `;
+
         const rightLabel = document.createElement('div');
-        rightLabel.className = 'weight-label';
-        rightLabel.textContent = `${toValue.toFixed(2)} ${toUnit.name.split(' ')[0]}`;
-        rightScale.appendChild(rightLabel);
-        
-        // Assemblage de la balance
-        balanceContainer.appendChild(balanceBeam);
-        balanceContainer.appendChild(balanceStand);
-        balanceContainer.appendChild(leftScale);
-        balanceContainer.appendChild(rightScale);
-        
-        container.appendChild(balanceContainer);
+        rightLabel.style.position = 'absolute';
+        rightLabel.style.right = '15px';
+        rightLabel.style.top = `${55 - angle * 3}px`;
+        rightLabel.style.width = '100px';
+        rightLabel.style.textAlign = 'center';
+        rightLabel.style.color = 'var(--text-light)';
+        rightLabel.style.fontWeight = '700';
+        rightLabel.style.fontSize = '0.95rem';
+        rightLabel.style.textShadow = '0 2px 4px rgba(0, 0, 0, 0.3)';
+        rightLabel.style.transition = 'top 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+        rightLabel.innerHTML = `
+            <div style="margin-bottom: 3px; color: #FCD34D;">${toValue.toFixed(3)}</div>
+            <div style="font-size: 0.8rem; font-weight: 600; opacity: 0.9;">${toUnit.name.split(' ')[0]}</div>
+        `;
+
+        // Assemblage de la balance moderne
+        balanceStructure.appendChild(base);
+        balanceStructure.appendChild(mainSupport);
+        balanceStructure.appendChild(topSupport);
+        balanceStructure.appendChild(mainBeam);
+        balanceStructure.appendChild(pivot);
+        balanceStructure.appendChild(leftConnection);
+        balanceStructure.appendChild(rightConnection);
+        balanceStructure.appendChild(leftPlate);
+        balanceStructure.appendChild(rightPlate);
+        balanceStructure.appendChild(leftLabel);
+        balanceStructure.appendChild(rightLabel);
+
+        container.appendChild(balanceStructure);
         visualization.appendChild(container);
     }
 
     function createCurrencyVisualization(fromValue, toValue, fromUnit, toUnit) {
         const container = document.createElement('div');
-        container.className = 'currency-container';
+        container.style.display = 'flex';
+        container.style.justifyContent = 'space-around';
+        container.style.alignItems = 'center';
+        container.style.width = '100%';
+        container.style.height = '100%';
+        container.style.padding = '20px';
         
-        // Premier groupe de pièces/billets
+        // Premier groupe de devises
+        const fromCurrencyContainer = document.createElement('div');
+        fromCurrencyContainer.style.display = 'flex';
+        fromCurrencyContainer.style.flexDirection = 'column';
+        fromCurrencyContainer.style.alignItems = 'center';
+        fromCurrencyContainer.style.gap = '10px';
+
         const fromStack = document.createElement('div');
         fromStack.className = 'currency-stack';
+        fromStack.style.display = 'flex';
+        fromStack.style.flexWrap = 'wrap';
+        fromStack.style.justifyContent = 'center';
+        fromStack.style.maxWidth = '120px';
         
         const fromLabel = document.createElement('div');
         fromLabel.className = 'currency-label';
         fromLabel.textContent = `${fromValue} ${fromUnit.name.split(' ')[0]}`;
-        fromStack.appendChild(fromLabel);
+        fromLabel.style.marginBottom = '10px';
         
-        // Représentation visuelle du montant
         const fromMoney = createMoneyElements(fromValue, fromUnit.name.split(' ')[0]);
         fromMoney.forEach(element => fromStack.appendChild(element));
         
-        // Deuxième groupe de pièces/billets
+        fromCurrencyContainer.appendChild(fromLabel);
+        fromCurrencyContainer.appendChild(fromStack);
+        
+        // Deuxième groupe de devises
+        const toCurrencyContainer = document.createElement('div');
+        toCurrencyContainer.style.display = 'flex';
+        toCurrencyContainer.style.flexDirection = 'column';
+        toCurrencyContainer.style.alignItems = 'center';
+        toCurrencyContainer.style.gap = '10px';
+
         const toStack = document.createElement('div');
         toStack.className = 'currency-stack';
+        toStack.style.display = 'flex';
+        toStack.style.flexWrap = 'wrap';
+        toStack.style.justifyContent = 'center';
+        toStack.style.maxWidth = '120px';
         
         const toLabel = document.createElement('div');
         toLabel.className = 'currency-label';
         toLabel.textContent = `${toValue.toFixed(2)} ${toUnit.name.split(' ')[0]}`;
-        toStack.appendChild(toLabel);
+        toLabel.style.marginBottom = '10px';
         
-        // Représentation visuelle du montant converti
         const toMoney = createMoneyElements(toValue, toUnit.name.split(' ')[0]);
         toMoney.forEach(element => toStack.appendChild(element));
         
-        // Flèche entre les deux piles
-        const arrow = document.createElement('div');
-        arrow.style.fontSize = '24px';
-        arrow.style.margin = '0 20px';
-        arrow.style.color = '#3498db';
-        arrow.innerHTML = '&#8646;';
+        toCurrencyContainer.appendChild(toLabel);
+        toCurrencyContainer.appendChild(toStack);
         
-        container.appendChild(fromStack);
-        container.appendChild(arrow);
-        container.appendChild(toStack);
+        container.appendChild(fromCurrencyContainer);
+        container.appendChild(toCurrencyContainer);
         visualization.appendChild(container);
     }
     
@@ -531,15 +633,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const elements = [];
         let remainingValue = value;
         
-        // Déterminer si on utilise des billets ou des pièces
         if (remainingValue >= 5) {
-            // Créer des billets pour les grandes valeurs
             const billCount = Math.min(5, Math.floor(remainingValue / 5));
             for (let i = 0; i < billCount; i++) {
                 const bill = document.createElement('div');
                 bill.className = 'bill';
                 
-                // Couleurs différentes selon la devise
                 switch(currencyCode) {
                     case 'EUR': bill.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)'; break;
                     case 'USD': bill.style.background = 'linear-gradient(45deg, #16a085, #1abc9c)'; break;
@@ -554,13 +653,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Ajouter des pièces pour le reste
         const coinCount = Math.min(10, Math.ceil(remainingValue));
         for (let i = 0; i < coinCount; i++) {
             const coin = document.createElement('div');
             coin.className = 'coin';
             
-            // Différentes couleurs selon la devise
             switch(currencyCode) {
                 case 'EUR': coin.style.background = 'linear-gradient(45deg, #f1c40f, #f39c12)'; break;
                 case 'USD': coin.style.background = 'linear-gradient(45deg, #7f8c8d, #95a5a6)'; break;
@@ -577,232 +674,209 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function createTemperatureVisualization(fromValue, toValue, fromUnit, toUnit) {
         const container = document.createElement('div');
-        container.className = 'thermometer-container';
+        container.style.display = 'flex';
+        container.style.justifyContent = 'space-around';
+        container.style.alignItems = 'center';
+        container.style.width = '100%';
+        container.style.height = '100%';
+        container.style.padding = '20px';
         
-        // Fonction pour créer un thermomètre
-        function createThermometer(value, unit, label) {
-            const thermometerColumn = document.createElement('div');
-            thermometerColumn.style.display = 'flex';
-            thermometerColumn.style.flexDirection = 'column';
-            thermometerColumn.style.alignItems = 'center';
+        function createThermometer(value, unit) {
+            const thermometerContainer = document.createElement('div');
+            thermometerContainer.style.display = 'flex';
+            thermometerContainer.style.flexDirection = 'column';
+            thermometerContainer.style.alignItems = 'center';
+            thermometerContainer.style.gap = '15px';
             
-            // Thermomètre
             const thermometer = document.createElement('div');
             thermometer.className = 'thermometer';
             
-            // Cercle du bas du thermomètre
-            const thermometerCircle = document.createElement('div');
-            thermometerCircle.className = 'thermometer-circle';
-            thermometer.appendChild(thermometerCircle);
+            const thermometerBulb = document.createElement('div');
+            thermometerBulb.className = 'thermometer-bulb';
+            thermometer.appendChild(thermometerBulb);
             
-            // Tube du thermomètre
             const thermometerFill = document.createElement('div');
             thermometerFill.className = 'thermometer-fill';
             
-            // Calculer la hauteur du remplissage (en %)
-            let fillHeight;
             let celsiusValue;
-            
             switch (unit.value) {
-                case 'C':
-                    celsiusValue = value;
-                    break;
-                case 'F':
-                    celsiusValue = (value - 32) * 5/9;
-                    break;
-                case 'K':
-                    celsiusValue = value - 273.15;
-                    break;
+                case 'C': celsiusValue = value; break;
+                case 'F': celsiusValue = (value - 32) * 5/9; break;
+                case 'K': celsiusValue = value - 273.15; break;
             }
             
-            // Limiter l'affichage entre -50°C et 150°C sur l'échelle complète
-            fillHeight = ((celsiusValue + 50) / 200) * 100;
-            fillHeight = Math.max(0, Math.min(100, fillHeight));
-            
+            // Calculer la hauteur de remplissage basée sur la température
+            const fillHeight = Math.max(10, Math.min(90, ((celsiusValue + 50) / 200) * 80 + 10));
             thermometerFill.style.height = `${fillHeight}%`;
+            
+            // Changer la couleur selon la température
+            if (celsiusValue < 0) {
+                thermometerFill.style.background = 'linear-gradient(0deg, #3498db, #2980b9)'; // Bleu pour froid
+            } else if (celsiusValue < 30) {
+                thermometerFill.style.background = 'linear-gradient(0deg, #2ecc71, #27ae60)'; // Vert pour tempéré
+            } else {
+                thermometerFill.style.background = 'linear-gradient(0deg, #e74c3c, #c0392b)'; // Rouge pour chaud
+            }
+            
             thermometer.appendChild(thermometerFill);
             
-            // Étiquette pour le thermomètre
             const thermometerLabel = document.createElement('div');
-            thermometerLabel.className = 'thermometer-label';
+            thermometerLabel.className = 'temperature-label';
             thermometerLabel.textContent = `${value.toFixed(1)} ${unit.name.split(' ')[0]}`;
+            thermometerLabel.style.textAlign = 'center';
+            thermometerLabel.style.fontWeight = '600';
+            thermometerLabel.style.color = 'var(--text-light)';
             
-            // Ajouter des marques d'échelle
-            const labelsContainer = document.createElement('div');
-            labelsContainer.className = 'temperature-labels';
+            thermometerContainer.appendChild(thermometer);
+            thermometerContainer.appendChild(thermometerLabel);
             
-            // Créer des marques d'échelle pour -50, 0, 50, 100, 150
-            const tempMarks = [-50, 0, 50, 100, 150];
-            
-            tempMarks.forEach(temp => {
-                const markContainer = document.createElement('div');
-                markContainer.style.display = 'flex';
-                markContainer.style.alignItems = 'center';
-                
-                const mark = document.createElement('div');
-                mark.className = 'temperature-mark';
-                
-                const markValue = document.createElement('span');
-                markValue.className = 'temperature-value';
-                
-                // Convertir la marque en l'unité affichée
-                let displayValue;
-                switch (unit.value) {
-                    case 'C':
-                        displayValue = temp;
-                        break;
-                    case 'F':
-                        displayValue = (temp * 9/5) + 32;
-                        break;
-                    case 'K':
-                        displayValue = temp + 273.15;
-                        break;
-                }
-                
-                markValue.textContent = `${displayValue}`;
-                
-                markContainer.appendChild(mark);
-                markContainer.appendChild(markValue);
-                labelsContainer.appendChild(markContainer);
-            });
-            
-            thermometerColumn.appendChild(thermometer);
-            thermometerColumn.appendChild(thermometerLabel);
-            
-            const column = document.createElement('div');
-            column.style.display = 'flex';
-            column.appendChild(thermometerColumn);
-            column.appendChild(labelsContainer);
-            
-            return column;
+            return thermometerContainer;
         }
         
-        // Créer les deux thermomètres
-        const fromThermometer = createThermometer(fromValue, fromUnit, fromUnit.name);
-        const toThermometer = createThermometer(toValue, toUnit, toUnit.name);
-        
-        // Ajouter les deux thermomètres au conteneur
-        container.appendChild(fromThermometer);
-        container.appendChild(toThermometer);
-        
+        container.appendChild(createThermometer(fromValue, fromUnit));
+        container.appendChild(createThermometer(toValue, toUnit));
         visualization.appendChild(container);
     }
 
     function createTimeVisualization(fromValue, toValue, fromUnit, toUnit) {
         const container = document.createElement('div');
-        container.className = 'time-container';
+        container.style.display = 'flex';
+        container.style.justifyContent = 'space-around';
+        container.style.alignItems = 'center';
+        container.style.width = '100%';
+        container.style.height = '100%';
+        container.style.padding = '20px';
         
-        // Conteneur pour les horloges
-        const clockContainer = document.createElement('div');
-        clockContainer.className = 'clock-container';
+        function createClock(value, unit) {
+            const clockContainer = document.createElement('div');
+            clockContainer.style.display = 'flex';
+            clockContainer.style.flexDirection = 'column';
+            clockContainer.style.alignItems = 'center';
+            clockContainer.style.gap = '15px';
+            
+            const clock = document.createElement('div');
+            clock.className = 'clock';
+            
+            const clockCenter = document.createElement('div');
+            clockCenter.className = 'clock-center';
+            clock.appendChild(clockCenter);
+            
+            const hourHand = document.createElement('div');
+            hourHand.className = 'clock-hand hour-hand';
+            
+            const minuteHand = document.createElement('div');
+            minuteHand.className = 'clock-hand minute-hand';
+            
+            // Calculer la position des aiguilles basée sur la valeur temporelle
+            const timeInSeconds = value * unit.value;
+            const timeInHours = timeInSeconds / 3600;
+            
+            // Position des aiguilles
+            const hourAngle = (timeInHours % 12) * 30; // 30 degrés par heure
+            const minuteAngle = ((timeInHours % 1) * 60) * 6; // 6 degrés par minute
+            
+            hourHand.style.transform = `rotate(${hourAngle}deg)`;
+            minuteHand.style.transform = `rotate(${minuteAngle}deg)`;
+            
+            // Changer la couleur des aiguilles selon l'unité de temps
+            if (unit.value < 60) { // Secondes et millisecondes
+                hourHand.style.background = '#e74c3c';
+                minuteHand.style.background = '#e74c3c';
+            } else if (unit.value < 3600) { // Minutes
+                hourHand.style.background = '#f39c12';
+                minuteHand.style.background = '#f39c12';
+            } else { // Heures et plus
+                hourHand.style.background = '#2ecc71';
+                minuteHand.style.background = '#2ecc71';
+            }
+            
+            clock.appendChild(hourHand);
+            clock.appendChild(minuteHand);
+            
+            const label = document.createElement('div');
+            label.className = 'time-label';
+            label.textContent = `${value} ${unit.name.split(' ')[0]}`;
+            label.style.textAlign = 'center';
+            label.style.fontWeight = '600';
+            label.style.color = 'var(--text-light)';
+            
+            clockContainer.appendChild(clock);
+            clockContainer.appendChild(label);
+            
+            return clockContainer;
+        }
         
-        // Première horloge représentant la valeur d'origine
-        const fromClockDiv = document.createElement('div');
-        fromClockDiv.style.display = 'flex';
-        fromClockDiv.style.flexDirection = 'column';
-        fromClockDiv.style.alignItems = 'center';
-        
-        const fromClock = document.createElement('div');
-        fromClock.className = 'clock';
-        
-        const fromClockCenter = document.createElement('div');
-        fromClockCenter.className = 'clock-center';
-        fromClock.appendChild(fromClockCenter);
-        
-        // Aiguilles de l'horloge
-        const hourHandFrom = document.createElement('div');
-        hourHandFrom.className = 'clock-hand hour-hand';
-        hourHandFrom.style.transform = 'rotate(0deg)';
-        
-        const minuteHandFrom = document.createElement('div');
-        minuteHandFrom.className = 'clock-hand minute-hand';
-        minuteHandFrom.style.transform = 'rotate(90deg)';
-        
-        fromClock.appendChild(hourHandFrom);
-        fromClock.appendChild(minuteHandFrom);
-        
-        const fromLabel = document.createElement('div');
-        fromLabel.className = 'time-label';
-        fromLabel.textContent = `${fromValue} ${fromUnit.name.split(' ')[0]}`;
-        
-        fromClockDiv.appendChild(fromClock);
-        fromClockDiv.appendChild(fromLabel);
-        
-        // Deuxième horloge représentant la valeur convertie
-        const toClockDiv = document.createElement('div');
-        toClockDiv.style.display = 'flex';
-        toClockDiv.style.flexDirection = 'column';
-        toClockDiv.style.alignItems = 'center';
-        
-        const toClock = document.createElement('div');
-        toClock.className = 'clock';
-        
-        const toClockCenter = document.createElement('div');
-        toClockCenter.className = 'clock-center';
-        toClock.appendChild(toClockCenter);
-        
-        // Aiguilles de l'horloge
-        const hourHandTo = document.createElement('div');
-        hourHandTo.className = 'clock-hand hour-hand';
-        
-        const minuteHandTo = document.createElement('div');
-        minuteHandTo.className = 'clock-hand minute-hand';
-        
-        // Calculer la rotation des aiguilles basée sur le ratio de conversion
-        const ratio = fromUnit.value / toUnit.value;
-        // Rotation plus rapide pour illustrer la différence
-        const rotationHour = (ratio * 30) % 360; // 30 degrés par heure
-        const rotationMinute = (ratio * 6) % 360; // 6 degrés par minute
-        
-        hourHandTo.style.transform = `rotate(${rotationHour}deg)`;
-        minuteHandTo.style.transform = `rotate(${rotationMinute}deg)`;
-        
-        toClock.appendChild(hourHandTo);
-        toClock.appendChild(minuteHandTo);
-        
-        const toLabel = document.createElement('div');
-        toLabel.className = 'time-label';
-        toLabel.textContent = `${toValue.toFixed(2)} ${toUnit.name.split(' ')[0]}`;
-        
-        toClockDiv.appendChild(toClock);
-        toClockDiv.appendChild(toLabel);
-        
-        // Texte explicatif du ratio
-        const timeRatio = document.createElement('div');
-        timeRatio.className = 'time-ratio';
-        
-        // Simplifier le ratio pour le rendre plus lisible
-        let gcd = function(a, b) {
-            if (!b) return a;
-            return gcd(b, a % b);
-        };
-        
-        const fromUnitValue = fromUnit.value;
-        const toUnitValue = toUnit.value;
-        const divisor = gcd(fromUnitValue, toUnitValue);
-        
-        const simplifiedFromValue = fromUnitValue / divisor;
-        const simplifiedToValue = toUnitValue / divisor;
-        
-        timeRatio.textContent = `Ratio: 1 ${fromUnit.name.split(' ')[0]} = ${(fromUnitValue/toUnitValue).toFixed(2)} ${toUnit.name.split(' ')[0]}`;
-        
-        clockContainer.appendChild(fromClockDiv);
-        clockContainer.appendChild(toClockDiv);
-        
-        container.appendChild(clockContainer);
-        container.appendChild(timeRatio);
-        
+        container.appendChild(createClock(fromValue, fromUnit));
+        container.appendChild(createClock(toValue, toUnit));
         visualization.appendChild(container);
     }
 
-    // Fonction pour ajouter à l'historique
+    // Fonctions utilitaires
+    function addRippleEffect(element) {
+        const ripple = document.createElement('span');
+        ripple.style.position = 'absolute';
+        ripple.style.borderRadius = '50%';
+        ripple.style.background = 'rgba(255,255,255,0.3)';
+        ripple.style.transform = 'scale(0)';
+        ripple.style.animation = 'ripple 0.6s linear';
+        ripple.style.left = '50%';
+        ripple.style.top = '50%';
+        ripple.style.width = '100px';
+        ripple.style.height = '100px';
+        ripple.style.marginLeft = '-50px';
+        ripple.style.marginTop = '-50px';
+        
+        element.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
+    }
+
+    function setupModals() {
+        const aboutBtn = document.getElementById('aboutBtn');
+        const aboutModal = document.getElementById('aboutModal');
+        const contactBtn = document.getElementById('contactBtn');
+        const contactModal = document.getElementById('contactModal');
+        const closeModals = document.querySelectorAll('.close-modal');
+
+        if (aboutBtn && aboutModal) {
+            aboutBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                aboutModal.style.display = 'block';
+            });
+        }
+
+        if (contactBtn && contactModal) {
+            contactBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                contactModal.style.display = 'block';
+            });
+        }
+
+        closeModals.forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (aboutModal) aboutModal.style.display = 'none';
+                if (contactModal) contactModal.style.display = 'none';
+            });
+        });
+
+        window.addEventListener('click', function(e) {
+            if (e.target === aboutModal) {
+                aboutModal.style.display = 'none';
+            }
+            if (e.target === contactModal) {
+                contactModal.style.display = 'none';
+            }
+        });
+    }
+
+    // Historique
     function addToHistory(fromValue, fromUnitText, toValue, toUnitText, category) {
-        // Vérifier si la valeur d'entrée est valide
         if (isNaN(parseFloat(fromValue))) {
             return;
         }
         
-        // Créer l'élément d'historique
+        const historyList = document.getElementById('historyList');
+        if (!historyList) return;
+        
         const historyItem = document.createElement('div');
         historyItem.className = 'history-item';
         
@@ -819,55 +893,44 @@ document.addEventListener('DOMContentLoaded', function() {
         reuseBtn.dataset.category = currentCategory;
         
         reuseBtn.addEventListener('click', function() {
-            // Changer de catégorie si nécessaire
             if (this.dataset.category !== currentCategory) {
                 const targetTab = document.querySelector(`.tab-btn[data-category="${this.dataset.category}"]`);
-                targetTab.click();
+                if (targetTab) targetTab.click();
             }
             
-            // Définir les valeurs
             fromValueInput.value = this.dataset.from;
             fromUnitSelect.value = this.dataset.fromUnit;
             toUnitSelect.value = this.dataset.toUnit;
-            
-            // Convertir
             convert();
         });
         
         historyItem.appendChild(historyText);
         historyItem.appendChild(reuseBtn);
         
-        // Ajouter au début de la liste
-        const historyList = document.getElementById('historyList');
-        
-        // Vérifier s'il existe déjà une conversion identique
         let isDuplicate = false;
         Array.from(historyList.children).forEach(item => {
             const itemText = item.querySelector('.history-text').textContent;
             if (itemText === historyText.textContent) {
                 isDuplicate = true;
-                // Déplacer l'élément existant au début de la liste
                 historyList.insertBefore(item, historyList.firstChild);
             }
         });
         
-        // Ajouter uniquement s'il n'y a pas de doublon
         if (!isDuplicate) {
             historyList.insertBefore(historyItem, historyList.firstChild);
             
-            // Limiter l'historique à 10 éléments
             if (historyList.children.length > 10) {
                 historyList.removeChild(historyList.lastChild);
             }
             
-            // Sauvegarder l'historique dans localStorage
             saveHistoryToLocalStorage();
         }
     }
 
-    // Fonction pour sauvegarder l'historique
     function saveHistoryToLocalStorage() {
         const historyList = document.getElementById('historyList');
+        if (!historyList) return;
+        
         const historyItems = [];
         
         for (let i = 0; i < historyList.children.length; i++) {
@@ -886,12 +949,12 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('conversionHistory', JSON.stringify(historyItems));
     }
 
-    // Fonction pour charger l'historique
     function loadHistoryFromLocalStorage() {
         const savedHistory = localStorage.getItem('conversionHistory');
-        if (savedHistory) {
+        const historyList = document.getElementById('historyList');
+        
+        if (savedHistory && historyList) {
             const historyItems = JSON.parse(savedHistory);
-            const historyList = document.getElementById('historyList');
             historyList.innerHTML = '';
             
             historyItems.forEach(item => {
@@ -913,13 +976,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 reuseBtn.addEventListener('click', function() {
                     if (this.dataset.category !== currentCategory) {
                         const targetTab = document.querySelector(`.tab-btn[data-category="${this.dataset.category}"]`);
-                        targetTab.click();
+                        if (targetTab) targetTab.click();
                     }
                     
                     fromValueInput.value = this.dataset.from;
                     fromUnitSelect.value = this.dataset.fromUnit;
                     toUnitSelect.value = this.dataset.toUnit;
-                    
                     convert();
                 });
                 
@@ -929,4 +991,165 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }
+
+    // Ajouter les styles CSS pour l'animation ripple
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes ripple {
+            to {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+        
+        /* Styles supplémentaires pour les visualisations */
+        .weight-balance {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+        
+        .weight-scale {
+            width: 80px;
+            height: 60px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            border-radius: 10px;
+            position: absolute;
+            top: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .weight-scale.left {
+            left: 20px;
+        }
+        
+        .weight-scale.right {
+            right: 20px;
+        }
+        
+        .bill {
+            width: 80px;
+            height: 40px;
+            background: var(--accent-gradient);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.8rem;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+            margin: 2px;
+            animation: billFloat 2s ease-in-out infinite;
+        }
+        
+        .coin {
+            width: 40px;
+            height: 40px;
+            background: var(--secondary-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.7rem;
+            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
+            margin: 2px;
+            animation: coinSpin 3s linear infinite;
+        }
+        
+        @keyframes billFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+        
+        @keyframes coinSpin {
+            0% { transform: rotateY(0deg); }
+            100% { transform: rotateY(360deg); }
+        }
+        
+        .thermometer {
+            width: 40px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px 20px 25px 25px;
+            position: relative;
+            border: 2px solid var(--border-light);
+            overflow: hidden;
+        }
+        
+        .thermometer-bulb {
+            width: 50px;
+            height: 50px;
+            background: var(--accent-gradient);
+            border-radius: 50%;
+            position: absolute;
+            bottom: -15px;
+            left: -5px;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+        
+        .thermometer-fill {
+            width: 30px;
+            height: 60%;
+            background: var(--accent-gradient);
+            position: absolute;
+            bottom: 10px;
+            left: 5px;
+            border-radius: 15px 15px 0 0;
+            transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .clock {
+            width: 100px;
+            height: 100px;
+            border: 4px solid var(--accent-gradient);
+            border-radius: 50%;
+            position: relative;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .clock-center {
+            width: 12px;
+            height: 12px;
+            background: var(--accent-gradient);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3;
+        }
+        
+        .clock-hand {
+            position: absolute;
+            background: var(--text-light);
+            transform-origin: bottom center;
+            border-radius: 2px;
+        }
+        
+        .hour-hand {
+            width: 4px;
+            height: 30px;
+            top: 20px;
+            left: 48px;
+        }
+        
+        .minute-hand {
+            width: 3px;
+            height: 40px;
+            top: 10px;
+            left: 48.5px;
+        }
+    `;
+    document.head.appendChild(style);
 });
